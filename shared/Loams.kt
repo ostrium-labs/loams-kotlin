@@ -7,7 +7,7 @@ import dev.loams.Json
 import dev.loams.JsonValue
 
 /** The engine the examples talk to; override with LOAMS_URL. */
-val endpoint: String = System.getenv("LOAMS_URL") ?: "http://127.0.0.1:18080"
+val endpoint: String = System.getenv("LOAMS_URL") ?: "http://127.0.0.1:8080"
 
 fun newClient(): LoamsClient = LoamsClient(endpoint = endpoint)
 

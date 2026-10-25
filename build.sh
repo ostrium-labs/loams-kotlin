@@ -1,17 +1,14 @@
 #!/usr/bin/env bash
-# Builds the Loams Kotlin SDK from its v0.1.0 tag, then compiles and runs the examples.
-#
-#   ./build.sh build              # SDK jar + all three examples
-#   ./build.sh run quickstart     # also: sql, app
-#
-# Needs: JDK 11+, git, curl, kotlinc on PATH (or at ~/.local/toolchains/kotlinc/kotlinc/bin).
-# The SDK is not on Maven Central yet, so it is built from source (sdks/kotlin at the
-# tag); once dev.loams:loams-kotlin:0.1.0 is published you can depend on it instead.
+# Compiles and runs the examples against dev.loams:loams-kotlin:0.1.2.
+#   ./build.sh build
+#   ./build.sh run quickstart   # also: sql, app
+# Needs JDK 11+, curl and kotlinc. SDK_JAR may point to an explicit local SDK jar.
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 build="$root/.build"
-sdk_tag="${LOAMS_SDK_TAG:-v0.1.0}"
+sdk_version="0.1.2"
+sdk_jar="${SDK_JAR:-$build/lib/loams-kotlin-$sdk_version.jar}"
 protobuf="protobuf-java-4.35.1.jar"
 protobuf_sha256="a4345ba2aa009912ff6f90467fea2d104605256b72c50840d75f13256638a472"
 
@@ -21,31 +18,24 @@ kotlinc="$(command -v kotlinc || true)"
 klib="$(cd "$(dirname "$(readlink -f "$kotlinc")")/../lib" && pwd)"
 
 sdk() {
-  [ -f "$build/loams-kotlin.jar" ] && return 0
-  mkdir -p "$build/lib" "$build/sdk-classes"
+  mkdir -p "$build/lib"
   if [ ! -s "$build/lib/$protobuf" ]; then
-    curl -fsSL --retry 3 -o "$build/lib/$protobuf" \
+    curl -fsSL --retry 3 -o "$build/lib/$protobuf.tmp" \
       "https://repo1.maven.org/maven2/com/google/protobuf/protobuf-java/4.35.1/$protobuf"
-    echo "$protobuf_sha256  $build/lib/$protobuf" | sha256sum -c - >/dev/null
+    echo "$protobuf_sha256  $build/lib/$protobuf.tmp" | sha256sum -c - >/dev/null
+    mv "$build/lib/$protobuf.tmp" "$build/lib/$protobuf"
   fi
-  if [ ! -d "$build/src/sdks/kotlin" ]; then
-    rm -rf "$build/src" && mkdir -p "$build/src"
-    git -C "$build/src" init -q
-    git -C "$build/src" remote add origin https://github.com/ostrium-labs/loams.git
-    git -C "$build/src" sparse-checkout set sdks/kotlin
-    git -C "$build/src" fetch -q --depth 1 --filter=blob:none origin "refs/tags/$sdk_tag"
-    git -C "$build/src" checkout -q FETCH_HEAD
+  if [ -n "${SDK_JAR:-}" ]; then
+    [ -s "$sdk_jar" ] || { echo "SDK_JAR does not exist: $sdk_jar" >&2; exit 1; }
+  elif [ ! -s "$sdk_jar" ]; then
+    curl -fsSL --retry 3 -o "$sdk_jar.tmp" \
+      "https://repo1.maven.org/maven2/dev/loams/loams-kotlin/$sdk_version/loams-kotlin-$sdk_version.jar"
+    mv "$sdk_jar.tmp" "$sdk_jar"
   fi
-  local s="$build/src/sdks/kotlin"
-  cp "$s/gen/loams-descriptor.binpb" "$build/sdk-classes/"
-  find "$s/src/main/kotlin" -name '*.kt' | sort >"$build/sdk-sources.txt"
-  "$kotlinc" -J-Xmx1g -nowarn -jvm-target 11 -cp "$build/lib/$protobuf" \
-    -d "$build/sdk-classes" "@$build/sdk-sources.txt"
-  jar --create --file "$build/loams-kotlin.jar" -C "$build/sdk-classes" .
 }
 
 classpath() {
-  printf '%s' "$build/loams-kotlin.jar:$build/lib/$protobuf:$klib/kotlin-stdlib.jar"
+  printf '%s' "$sdk_jar:$build/lib/$protobuf:$klib/kotlin-stdlib.jar"
 }
 
 example() {

@@ -5,9 +5,8 @@ import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 
-// SQL over a collection. The Kotlin SDK has no SQL call (SQL is the engine's
-// `POST /v1/namespaces/{ns}/sql` endpoint, not a Connect RPC), so this uses the
-// JDK's HttpClient for the SQL part and the SDK for seeding the collection.
+// Demonstrate SQL through the native HTTP route with the JDK HttpClient.
+// The SDK also provides a SQL module; collection seeding here uses SDK RPCs.
 
 const val NAMESPACE = "examples-kotlin"
 const val COLLECTION = "articles"
