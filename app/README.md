@@ -1,7 +1,8 @@
 # app
 
 A search service on the JDK's built-in `HttpServer`. `GET /search?q=...&category=...&limit=...`
-returns the engine's hybrid-search answer as JSON. It seeds the sample articles on start-up.
+returns the SDK's hybrid-search answer as JSON. It seeds `service-articles` through the SDK on
+start-up; inbound HTTP is separate from the app's SDK-to-engine calls.
 
 ```sh
 ./build.sh run app 8081

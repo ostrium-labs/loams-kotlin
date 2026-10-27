@@ -1,63 +1,59 @@
 # Loams Kotlin examples
 
-Loams is an open-source data engine for AI apps: collections with vector, BM25 and
-filtered hybrid search, SQL over the same data, and agent memory, in one Rust binary.
-These are runnable examples for the Kotlin SDK (`sdks/kotlin` in
-[ostrium-labs/loams](https://github.com/ostrium-labs/loams)).
-
-> Preview software: Loams 0.1.0 is a preview release and its APIs can change. See
-> [docs/release/preview.md](https://github.com/ostrium-labs/loams/blob/main/docs/release/preview.md)
-> and the docs at <https://loams.dev/docs>.
+These examples target the published **Loams SDK 0.1.2** release.
 
 | Example | What it shows |
 |---|---|
-| [`quickstart/`](quickstart) | connect, create a collection, upsert documents, hybrid search (vector + BM25 + filter) |
-| [`sql/`](sql) | SQL over a collection: aggregates, `vector_search`, `text_search`, `rrf` |
-| [`app/`](app) | a small HTTP search service in plain Kotlin (JDK `HttpServer`) |
+| [`quickstart/`](quickstart) | instance/API discovery; namespaces, collections and documents; text/vector/hybrid search; experimental graph; SQL; streams |
+| [`sql/`](sql) | SDK SQL module with parameters, aggregates and hybrid-search table functions |
+| [`app/`](app) | JDK HTTP search service whose Loams calls use SDK modules |
 
-## Install the SDK
-
-The SDK is `dev.loams:loams-kotlin:0.1.0` (Gradle: `implementation("dev.loams:loams-kotlin:0.1.0")`).
-**It is not on Maven Central yet**, so `build.sh` builds it from the monorepo tag `v0.1.0`
-(`sdks/kotlin`) and the examples compile against that jar. Once the artifact is
-published you can drop that step and use the coordinates above. The SDK depends only on
-`protobuf-java` and the Kotlin standard library.
+The SDK artifact is `dev.loams:loams-kotlin:0.1.2`. `build.sh` downloads that exact jar
+and protobuf-java from Maven Central. To use a local SDK build, set
+`SDK_JAR=/path/to/loams-kotlin-0.1.2.jar`.
 
 ## Run
 
-You need a JDK 11+, `git`, `curl` and `kotlinc` on your `PATH`, and a local engine:
+You need a JDK 11+, `curl` and `kotlinc` on your `PATH`, plus a local engine:
 
 ```sh
-# in a checkout of ostrium-labs/loams
-cargo run -p loams -- dev            # note the address it prints
-# or use the compose stack from docs/release/preview.md
+cargo run -p loams -- dev  # from an ostrium-labs/loams checkout
 ```
 
-Then, from this repo (set `LOAMS_URL` if your engine is not on `http://127.0.0.1:18080`):
+Then, from this repository:
 
 ```sh
-export LOAMS_URL=http://127.0.0.1:8080   # whatever address your engine prints
-./build.sh build                 # SDK jar + all examples
+export LOAMS_ENDPOINT=http://127.0.0.1:8080
+export LOAMS_NAMESPACE=examples-kotlin  # optional; use a disposable namespace
+./build.sh build
 ./build.sh run quickstart
+./build.sh run quickstart --live-admin  # optional, read-only; requires a served Live admin API
 ./build.sh run sql
-./build.sh run app 8081          # then: curl 'http://127.0.0.1:8081/search?q=durable+writes'
+./build.sh run app 8081
 ```
 
-The examples write only to the namespace `examples-kotlin` and assume auth is off. To use a key, pass `tokenSource = StaticTokenSource(...)` to `LoamsClient` in
-[`shared/Loams.kt`](shared/Loams.kt).
+Set `LOAMS_API_KEY` or `LOAMS_TOKEN` if engine authentication is enabled. Examples create
+collections and append stream records in the configured namespace.
 
-## How the examples call the SDK
+## SDK module coverage
 
-The Kotlin SDK's typed surface is a descriptor-driven facade over protobuf
-`DynamicMessage`, with `client.invoke("<package>.<Service>/<Method>", message)` as the
-generic call. [`shared/Loams.kt`](shared/Loams.kt) is a small helper shared by all three
-examples: it builds a request from JSON text and prints responses as JSON. Transport,
-retries and errors all come from the SDK. The SDK has no SQL call, so the `sql` example
-sends SQL to the engine's `POST /v1/namespaces/{ns}/sql` endpoint with the JDK `HttpClient`.
+Examples use the published high-level app modules `namespaces`, `collections`, `documents`,
+`search`, `vector`, `graph`, `sql` and `streams`. The shared helper configures the client,
+seeds records through the modules, and serializes SDK protobuf replies for the inbound HTTP
+demo. The optional Live admin list uses the SDK's descriptor-backed module facade because
+that surface has no dedicated typed builder. Graph is experimental and the quickstart reports
+it unavailable when the server build does not include it.
 
-Embeddings are a toy hashing embedder (64 dimensions, offline), so the examples need no
-model or API key; swap `embed()` for a real model in your own code.
+Embeddings are deterministic toy hashes (64 dimensions), not model output. Replace `embed()`
+with your model and use the same vector dimension as the collection schema.
 
-## License
+| Module family | Example coverage in SDK 0.1.2 |
+|---|---|
+| `instance`, system/version discovery | Covered by quickstart (`getInstance`, `apiVersions`). |
+| `namespaces`, `collections`, `documents`, `search`, `vector`, `graph`, `sql`, `streams` | Covered by quickstart and SQL; graph is optional when the server enables the experimental package. |
+| `live`, `live.admin`, `tables` | The quickstart has an opt-in, read-only Live admin listing. Live watch and tables query/mutate/deploy calls are not exercised because they need application-specific sessions or privileges. |
+| Authentication | Optional client configuration with `LOAMS_API_KEY` / `LOAMS_TOKEN`; no identity provisioning or sign-in flow is shown. |
+| House | Unavailable as a typed module in SDK 0.1.2. |
 
+Loams 0.1.2 is preview software; APIs may change. See the [tagged release notes](https://github.com/ostrium-labs/loams/blob/v0.1.2/docs/release/preview.md).
 Apache-2.0, see [LICENSE](LICENSE).

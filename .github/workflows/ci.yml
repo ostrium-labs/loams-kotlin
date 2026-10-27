@@ -16,5 +16,5 @@ jobs:
           curl -fsSL -o /tmp/kotlin.zip https://github.com/JetBrains/kotlin/releases/download/v2.4.20/kotlin-compiler-2.4.20.zip
           unzip -q /tmp/kotlin.zip -d "$RUNNER_TEMP"
           echo "$RUNNER_TEMP/kotlinc/bin" >> "$GITHUB_PATH"
-      - name: Build the SDK (v0.1.0) and the examples
+      - name: Compile against dev.loams:loams-kotlin:0.1.2
         run: ./build.sh build
